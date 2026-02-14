@@ -32,20 +32,39 @@ class LocalFlowApp:
 
         self._listener: keyboard.Listener | None = None
         self._side_specific_hotkey = bool(re.search(r"<(?:cmd|ctrl|shift|alt)_[lr]>", config.hotkey))
-        self._hotkey = keyboard.HotKey(keyboard.HotKey.parse(config.hotkey), self._toggle_recording)
+        self._hotkey_keys = set(keyboard.HotKey.parse(config.hotkey))
+        self._pressed_hotkey_keys: set[keyboard.KeyCode | keyboard.Key] = set()
         self._state_lock = threading.Lock()
         self._processing = False
+        self._clip_started_at: float | None = None
         self._executor = ThreadPoolExecutor(max_workers=1)
 
     def _on_press(self, key: keyboard.KeyCode | keyboard.Key) -> None:
         if self._listener is None:
             return
-        self._hotkey.press(self._normalize_listener_key(key))
+        normalized = self._normalize_listener_key(key)
+        if normalized not in self._hotkey_keys:
+            return
+        with self._state_lock:
+            self._pressed_hotkey_keys.add(normalized)
+            if self._processing or self.recorder.recording:
+                return
+            if self._pressed_hotkey_keys == self._hotkey_keys:
+                self.recorder.start()
+                self._clip_started_at = time.monotonic()
+                print("[localflow] Recording...")
 
     def _on_release(self, key: keyboard.KeyCode | keyboard.Key) -> None:
         if self._listener is None:
             return
-        self._hotkey.release(self._normalize_listener_key(key))
+        normalized = self._normalize_listener_key(key)
+        with self._state_lock:
+            self._pressed_hotkey_keys.discard(normalized)
+            if self._processing or not self.recorder.recording:
+                return
+            if self._pressed_hotkey_keys == self._hotkey_keys:
+                return
+            self._finish_recording_locked()
 
     def _normalize_listener_key(self, key: keyboard.KeyCode | keyboard.Key) -> keyboard.KeyCode | keyboard.Key:
         if self._listener is None:
@@ -55,26 +74,18 @@ class LocalFlowApp:
             return keyboard.KeyCode.from_vk(key.value.vk)
         return self._listener.canonical(key)
 
-    def _toggle_recording(self) -> None:
-        with self._state_lock:
-            if self._processing:
-                print("[localflow] Still processing previous clip.")
-                return
+    def _finish_recording_locked(self) -> None:
+        audio, duration = self.recorder.stop()
+        clip_started_at = self._clip_started_at
+        self._clip_started_at = None
+        if duration < 0.2 or audio.size == 0:
+            print("[localflow] Clip too short.")
+            return
+        self._processing = True
+        print(f"[localflow] Processing {duration:.1f}s clip...")
+        self._executor.submit(self._process_audio, audio, clip_started_at)
 
-            if self.recorder.recording:
-                audio, duration = self.recorder.stop()
-                if duration < 0.2 or audio.size == 0:
-                    print("[localflow] Clip too short.")
-                    return
-                self._processing = True
-                print(f"[localflow] Processing {duration:.1f}s clip...")
-                self._executor.submit(self._process_audio, audio)
-                return
-
-            self.recorder.start()
-            print("[localflow] Recording...")
-
-    def _process_audio(self, audio) -> None:
+    def _process_audio(self, audio, clip_started_at: float | None) -> None:
         try:
             text = self.transcriber.transcribe(audio, language=self.config.language)
             if self.config.enable_voice_commands:
@@ -86,6 +97,9 @@ class LocalFlowApp:
                 append_history(text)
                 emit_text(text, auto_paste=self.config.auto_paste, paste_mode=self.config.paste_mode)
                 print(f"[localflow] {text}")
+                if clip_started_at is not None:
+                    total_elapsed = max(0.0, time.monotonic() - clip_started_at)
+                    print(f"[localflow] Start->text time: {total_elapsed:.2f}s")
             else:
                 print("[localflow] No speech detected.")
         except Exception as exc:
@@ -94,18 +108,24 @@ class LocalFlowApp:
             with self._state_lock:
                 self._processing = False
 
-    def run(self) -> None:
-        print("[localflow] Running in fully local mode.")
-        print(f"[localflow] Hotkey: {self.config.hotkey}")
-        print(f"[localflow] Whisper model: {self.config.whisper_model}")
-        print(f"[localflow] Enhancer: {self.enhancer.status}")
-        print("[localflow] Press Ctrl+C to exit.")
-
+    def start_hotkey_listener(self, announce: bool = True) -> None:
+        if self._listener is not None and self._listener.is_alive():
+            return
+        if announce:
+            print("[localflow] Running in fully local mode.")
+            print(f"[localflow] Hotkey: {self.config.hotkey}")
+            print(f"[localflow] Whisper model: {self.config.whisper_model}")
+            print(f"[localflow] Enhancer: {self.enhancer.status}")
+            print("[localflow] Hold hotkey to record, release to process.")
+            print("[localflow] Press Ctrl+C to exit.")
         self._listener = keyboard.Listener(on_press=self._on_press, on_release=self._on_release)
         self._listener.start()
 
+    def run(self) -> None:
+        self.start_hotkey_listener(announce=True)
+
         try:
-            while self._listener.is_alive():
+            while self._listener is not None and self._listener.is_alive():
                 time.sleep(0.2)
         except KeyboardInterrupt:
             pass
@@ -115,6 +135,8 @@ class LocalFlowApp:
     def stop(self) -> None:
         if self.recorder.recording:
             self.recorder.stop()
+            self._clip_started_at = None
         if self._listener is not None:
             self._listener.stop()
+            self._listener = None
         self._executor.shutdown(wait=False, cancel_futures=True)

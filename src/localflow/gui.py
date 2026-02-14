@@ -10,17 +10,21 @@ from localflow.history import read_recent_history
 class LocalFlowGUI:
     def __init__(self, config_path: Path | None = None) -> None:
         self.config_path = config_path or default_config_path()
+        self._app = None
         self.root = tk.Tk()
         self.root.title("LocalFlow")
         self.root.geometry("760x460")
         self.root.minsize(640, 400)
         self.root.configure(bg="#f3f4f6")
 
+        self.dictation_text = tk.StringVar(value="")
         self.status_text = tk.StringVar(value="")
 
         self._build_layout()
+        self._start_background_dictation()
         self.refresh_from_disk()
         self._schedule_refresh()
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _build_layout(self) -> None:
         container = tk.Frame(self.root, bg="#f3f4f6", padx=16, pady=16)
@@ -43,6 +47,15 @@ class LocalFlowGUI:
             font=("Helvetica", 13),
         )
         subtitle.pack(anchor="w", pady=(2, 10))
+
+        dictation_status = tk.Label(
+            container,
+            textvariable=self.dictation_text,
+            bg="#f3f4f6",
+            fg="#0369a1",
+            font=("Helvetica", 12, "bold"),
+        )
+        dictation_status.pack(anchor="w", pady=(0, 10))
 
         top = tk.Frame(container, bg="#f3f4f6")
         top.pack(fill=tk.X, pady=(0, 10))
@@ -113,7 +126,9 @@ class LocalFlowGUI:
 
     def refresh_from_disk(self) -> None:
         try:
-            load_config(self.config_path)
+            config = load_config(self.config_path)
+            if not self.dictation_text.get():
+                self.dictation_text.set(f"Dictation active. Hold {config.hotkey} to record.")
             self._refresh_history()
             self.status_text.set("Loaded speech history.")
         except Exception as exc:
@@ -142,6 +157,26 @@ class LocalFlowGUI:
             # Keep GUI responsive even if history read fails once.
             pass
         self._schedule_refresh()
+
+    def _start_background_dictation(self) -> None:
+        try:
+            from localflow.app import LocalFlowApp
+
+            config = load_config(self.config_path)
+            self._app = LocalFlowApp(config)
+            self._app.start_hotkey_listener(announce=False)
+            self.dictation_text.set(f"Dictation active. Hold {config.hotkey} to record.")
+        except Exception as exc:
+            self._app = None
+            self.dictation_text.set(f"Dictation failed to start: {exc}")
+
+    def _on_close(self) -> None:
+        if self._app is not None:
+            try:
+                self._app.stop()
+            except Exception:
+                pass
+        self.root.destroy()
 
     def run(self) -> None:
         self.root.mainloop()

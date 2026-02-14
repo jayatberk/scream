@@ -58,10 +58,10 @@ The app stores local models in:
 localflow run
 ```
 
-Default toggle key: `Right Command + Right Shift` (`<cmd_r>+<shift_r>`)
+Default hold key: `Right Command` (`<cmd_r>`)
 
-- Press once: start recording
-- Press again: stop, transcribe, clean, and paste
+- Hold to record
+- Release to stop, transcribe, clean, and paste
 
 ## GUI
 

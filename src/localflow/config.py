@@ -10,7 +10,7 @@ except ModuleNotFoundError:  # Python < 3.11
     tomllib = None
 
 DEFAULT_CONFIG_TEXT = """# LocalFlow configuration
-hotkey = "<cmd_r>+<shift_r>"
+hotkey = "<cmd_r>"
 sample_rate = 16000
 whisper_model = "tiny.en"
 language = "en"
@@ -115,7 +115,7 @@ def load_config(path: Path | None = None) -> FlowConfig:
         ensure_default_config(target)
     data = _parse_config_text(target.read_text(encoding="utf-8"))
 
-    hotkey = _normalize_hotkey(str(data.get("hotkey", "<cmd_r>+<shift_r>")))
+    hotkey = _normalize_hotkey(str(data.get("hotkey", "<cmd_r>")))
     sample_rate = _as_int(data.get("sample_rate", 16000), 16000)
     whisper_model = str(data.get("whisper_model", "tiny.en"))
 
@@ -200,8 +200,9 @@ def _normalize_hotkey(hotkey: str) -> str:
         "cmd_r+shift_r",
         "right command + right shift",
         "right-command+right-shift",
+        "<cmd_r>+<shift_r>",
         "<cmd_r>+<shift>",
         "<cmd_r>+shift_r",
     }:
-        return "<cmd_r>+<shift_r>"
+        return "<cmd_r>"
     return normalized
