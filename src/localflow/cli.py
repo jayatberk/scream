@@ -29,6 +29,9 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser = subparsers.add_parser("check", help="Show resolved runtime configuration.")
     check_parser.add_argument("--config", type=Path, default=None, help="Custom config path.")
 
+    gui_parser = subparsers.add_parser("gui", help="Open simple LocalFlow GUI.")
+    gui_parser.add_argument("--config", type=Path, default=None, help="Custom config path.")
+
     return parser
 
 
@@ -69,6 +72,19 @@ def command_run(config_path: Path | None) -> int:
     return 0
 
 
+def command_gui(config_path: Path | None) -> int:
+    if sys.platform != "darwin":
+        print("LocalFlow currently supports macOS only.")
+        return 1
+    try:
+        from localflow.gui import run_gui
+    except Exception as exc:
+        print(f"Could not open GUI: {exc}")
+        return 1
+    run_gui(config_path)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -79,6 +95,8 @@ def main(argv: list[str] | None = None) -> int:
         return command_check(args.config)
     if args.command == "run":
         return command_run(args.config)
+    if args.command == "gui":
+        return command_gui(args.config)
 
     parser.print_help(sys.stderr)
     return 2

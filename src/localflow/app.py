@@ -12,6 +12,7 @@ from localflow.audio import AudioRecorder
 from localflow.commands import apply_voice_commands
 from localflow.config import FlowConfig
 from localflow.enhance import LocalEnhancer
+from localflow.history import append_history
 from localflow.output import emit_text
 from localflow.transcribe import WhisperTranscriber
 
@@ -82,6 +83,7 @@ class LocalFlowApp:
                 text = self.enhancer.enhance(text)
 
             if text:
+                append_history(text)
                 emit_text(text, auto_paste=self.config.auto_paste, paste_mode=self.config.paste_mode)
                 print(f"[localflow] {text}")
             else:

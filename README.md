@@ -63,6 +63,16 @@ Default toggle key: `Right Command + Right Shift` (`<cmd_r>+<shift_r>`)
 - Press once: start recording
 - Press again: stop, transcribe, clean, and paste
 
+## GUI
+
+Open a simple GUI to:
+- Toggle enhancer on/off
+- View last 10 spoken items
+
+```bash
+localflow gui
+```
+
 ## Optional: Download a Small Local Rewrite Model
 
 ```bash
@@ -100,3 +110,4 @@ When enabled:
 
 - This project is designed to stay local at runtime on macOS.
 - First Whisper model load may download weights once, then run from local cache.
+- Spoken history is stored at `~/Library/Application Support/localflow/history.jsonl`.

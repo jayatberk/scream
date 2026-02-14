@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 
 try:
     import tomllib
@@ -36,12 +37,20 @@ class FlowConfig:
     enhancer_temperature: float
 
 
+def app_support_directory() -> Path:
+    return Path.home() / "Library" / "Application Support" / "localflow"
+
+
 def default_config_path() -> Path:
-    return Path.home() / "Library" / "Application Support" / "localflow" / "config.toml"
+    return app_support_directory() / "config.toml"
 
 
 def model_directory() -> Path:
-    return Path.home() / "Library" / "Application Support" / "localflow" / "models"
+    return app_support_directory() / "models"
+
+
+def history_file_path() -> Path:
+    return app_support_directory() / "history.jsonl"
 
 
 def ensure_default_config(path: Path | None = None, overwrite: bool = False) -> Path:
@@ -49,6 +58,20 @@ def ensure_default_config(path: Path | None = None, overwrite: bool = False) -> 
     target.parent.mkdir(parents=True, exist_ok=True)
     if overwrite or not target.exists():
         target.write_text(DEFAULT_CONFIG_TEXT, encoding="utf-8")
+    return target
+
+
+def set_enable_enhancer(enabled: bool, path: Path | None = None) -> Path:
+    target = ensure_default_config(path)
+    value = "true" if enabled else "false"
+    content = target.read_text(encoding="utf-8")
+    pattern = r"(?m)^(\s*enable_enhancer\s*=\s*)(?:true|false|[^\n#]+)(\s*(?:#.*)?)$"
+    updated, count = re.subn(pattern, rf"\1{value}\2", content, count=1)
+    if count == 0:
+        if updated and not updated.endswith("\n"):
+            updated += "\n"
+        updated += f"enable_enhancer = {value}\n"
+    target.write_text(updated, encoding="utf-8")
     return target
 
 
