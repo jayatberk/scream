@@ -34,6 +34,8 @@ class LocalFlowApp:
         self._side_specific_hotkey = bool(re.search(r"<(?:cmd|ctrl|shift|alt)_[lr]>", config.hotkey))
         self._hotkey_keys = set(keyboard.HotKey.parse(config.hotkey))
         self._pressed_hotkey_keys: set[keyboard.KeyCode | keyboard.Key] = set()
+        self._toggle_mode = config.hotkey == "<cmd_r>+<space>"
+        self._hotkey_activated = False
         self._state_lock = threading.Lock()
         self._processing = False
         self._clip_started_at: float | None = None
@@ -47,12 +49,25 @@ class LocalFlowApp:
             return
         with self._state_lock:
             self._pressed_hotkey_keys.add(normalized)
-            if self._processing or self.recorder.recording:
-                return
             if self._pressed_hotkey_keys == self._hotkey_keys:
-                self.recorder.start()
-                self._clip_started_at = time.monotonic()
-                print("[localflow] Recording...")
+                if self._hotkey_activated:
+                    return
+                self._hotkey_activated = True
+                if self._processing:
+                    print("[localflow] Still processing previous clip.")
+                    return
+                if self._toggle_mode:
+                    if self.recorder.recording:
+                        self._finish_recording_locked()
+                    else:
+                        self.recorder.start()
+                        self._clip_started_at = time.monotonic()
+                        print("[localflow] Recording...")
+                    return
+                if not self.recorder.recording:
+                    self.recorder.start()
+                    self._clip_started_at = time.monotonic()
+                    print("[localflow] Recording...")
 
     def _on_release(self, key: keyboard.KeyCode | keyboard.Key) -> None:
         if self._listener is None:
@@ -60,6 +75,10 @@ class LocalFlowApp:
         normalized = self._normalize_listener_key(key)
         with self._state_lock:
             self._pressed_hotkey_keys.discard(normalized)
+            if self._pressed_hotkey_keys != self._hotkey_keys:
+                self._hotkey_activated = False
+            if self._toggle_mode:
+                return
             if self._processing or not self.recorder.recording:
                 return
             if self._pressed_hotkey_keys == self._hotkey_keys:
@@ -116,7 +135,10 @@ class LocalFlowApp:
             print(f"[localflow] Hotkey: {self.config.hotkey}")
             print(f"[localflow] Whisper model: {self.config.whisper_model}")
             print(f"[localflow] Enhancer: {self.enhancer.status}")
-            print("[localflow] Hold hotkey to record, release to process.")
+            if self._toggle_mode:
+                print("[localflow] Press hotkey to start recording; press again to stop and process.")
+            else:
+                print("[localflow] Hold hotkey to record, release to process.")
             print("[localflow] Press Ctrl+C to exit.")
         self._listener = keyboard.Listener(on_press=self._on_press, on_release=self._on_release)
         self._listener.start()

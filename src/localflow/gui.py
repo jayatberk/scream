@@ -128,7 +128,10 @@ class LocalFlowGUI:
         try:
             config = load_config(self.config_path)
             if not self.dictation_text.get():
-                self.dictation_text.set(f"Dictation active. Hold {config.hotkey} to record.")
+                if config.hotkey == "<cmd_r>+<space>":
+                    self.dictation_text.set(f"Dictation active. Press {config.hotkey} to start/stop.")
+                else:
+                    self.dictation_text.set(f"Dictation active. Hold {config.hotkey} to record.")
             self._refresh_history()
             self.status_text.set("Loaded speech history.")
         except Exception as exc:
@@ -165,7 +168,10 @@ class LocalFlowGUI:
             config = load_config(self.config_path)
             self._app = LocalFlowApp(config)
             self._app.start_hotkey_listener(announce=False)
-            self.dictation_text.set(f"Dictation active. Hold {config.hotkey} to record.")
+            if config.hotkey == "<cmd_r>+<space>":
+                self.dictation_text.set(f"Dictation active. Press {config.hotkey} to start/stop.")
+            else:
+                self.dictation_text.set(f"Dictation active. Hold {config.hotkey} to record.")
         except Exception as exc:
             self._app = None
             self.dictation_text.set(f"Dictation failed to start: {exc}")

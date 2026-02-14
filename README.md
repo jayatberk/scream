@@ -63,6 +63,11 @@ Default hold key: `Right Command` (`<cmd_r>`)
 - Hold to record
 - Release to stop, transcribe, clean, and paste
 
+Alternate toggle option:
+- Set `hotkey = "<cmd_r>+<space>"`
+- Press once to start recording
+- Press again to stop, transcribe, clean, and paste
+
 ## GUI
 
 Open a simple GUI to:

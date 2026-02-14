@@ -197,6 +197,16 @@ def _normalize_hotkey(hotkey: str) -> str:
     if normalized in {"cmd_r", "right_cmd", "right command", "right-command"}:
         return "<cmd_r>"
     if normalized in {
+        "cmd_r+space",
+        "cmd_r+<space>",
+        "cmd_r + space",
+        "right command + space",
+        "right-command+space",
+        "<cmd_r>+space",
+        "<cmd_r>+<space>",
+    }:
+        return "<cmd_r>+<space>"
+    if normalized in {
         "cmd_r+shift_r",
         "right command + right shift",
         "right-command+right-shift",
