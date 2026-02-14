@@ -71,11 +71,14 @@ Alternate toggle option:
 ## GUI
 
 Open a simple GUI to:
-- View last 10 spoken items
+- View last 10 spoken items in a persistent history dashboard
 
 ```bash
 localflow gui
 ```
+
+The GUI is read-only and decoupled from dictation/transcription.  
+Run `localflow run` separately to keep capturing speech.
 
 ## Optional: Download a Small Local Rewrite Model
 
@@ -115,3 +118,5 @@ When enabled:
 - This project is designed to stay local at runtime on macOS.
 - First Whisper model load may download weights once, then run from local cache.
 - Spoken history is stored at `~/Library/Application Support/localflow/history.jsonl`.
+- History saves pre-enhancer text when `enable_enhancer = false`.
+- History saves post-enhancer text when `enable_enhancer = true`.

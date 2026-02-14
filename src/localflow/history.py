@@ -13,9 +13,15 @@ from localflow.config import history_file_path
 class HistoryEntry:
     timestamp: str
     text: str
+    mode: str
 
 
-def append_history(text: str, path: Path | None = None, max_entries: int = 1000) -> None:
+def append_history(
+    text: str,
+    mode: str = "pre-enhancer",
+    path: Path | None = None,
+    max_entries: int = 1000,
+) -> None:
     cleaned = text.strip()
     if not cleaned:
         return
@@ -26,6 +32,7 @@ def append_history(text: str, path: Path | None = None, max_entries: int = 1000)
     payload = {
         "timestamp": datetime.now().astimezone().isoformat(timespec="seconds"),
         "text": cleaned,
+        "mode": mode,
     }
     try:
         with target.open("a", encoding="utf-8") as handle:
@@ -57,10 +64,11 @@ def read_recent_history(limit: int = 10, path: Path | None = None) -> list[Histo
             payload = json.loads(raw)
             timestamp = str(payload.get("timestamp", ""))
             text = str(payload.get("text", "")).strip()
+            mode = str(payload.get("mode", "pre-enhancer")).strip() or "pre-enhancer"
             if text:
-                results.append(HistoryEntry(timestamp=timestamp, text=text))
+                results.append(HistoryEntry(timestamp=timestamp, text=text, mode=mode))
         except Exception:
-            results.append(HistoryEntry(timestamp="", text=raw))
+            results.append(HistoryEntry(timestamp="", text=raw, mode="unknown"))
     return results
 
 

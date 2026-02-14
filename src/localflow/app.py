@@ -106,14 +106,25 @@ class LocalFlowApp:
 
     def _process_audio(self, audio, clip_started_at: float | None) -> None:
         try:
-            text = self.transcriber.transcribe(audio, language=self.config.language)
+            raw_text = self.transcriber.transcribe(audio, language=self.config.language)
+            text = raw_text
             if self.config.enable_voice_commands:
                 text = apply_voice_commands(text)
+            pre_enhancer_text = text
+            enhancer_elapsed: float | None = None
             if self.config.enable_enhancer:
+                enhancer_started_at = time.monotonic()
                 text = self.enhancer.enhance(text)
+                enhancer_elapsed = max(0.0, time.monotonic() - enhancer_started_at)
 
             if text:
-                append_history(text)
+                history_mode = "post-enhancer" if self.config.enable_enhancer else "pre-enhancer"
+                history_text = text if self.config.enable_enhancer else pre_enhancer_text
+                print(f"[localflow] Before enhancer: {pre_enhancer_text}")
+                print(f"[localflow] After enhancer: {text}")
+                if enhancer_elapsed is not None:
+                    print(f"[localflow] Enhancer time: {enhancer_elapsed:.2f}s")
+                append_history(history_text, mode=history_mode)
                 emit_text(text, auto_paste=self.config.auto_paste, paste_mode=self.config.paste_mode)
                 print(f"[localflow] {text}")
                 if clip_started_at is not None:
