@@ -34,7 +34,7 @@ class LocalFlowApp:
         self._side_specific_hotkey = bool(re.search(r"<(?:cmd|ctrl|shift|alt)_[lr]>", config.hotkey))
         self._hotkey_keys = set(keyboard.HotKey.parse(config.hotkey))
         self._pressed_hotkey_keys: set[keyboard.KeyCode | keyboard.Key] = set()
-        self._toggle_mode = config.hotkey == "<cmd_r>+<space>"
+        self._toggle_mode = config.hotkey == "<cmd>+<shift>"
         self._hotkey_activated = False
         self._state_lock = threading.Lock()
         self._processing = False
