@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 import time
 import sys
+import re
 
 from pynput import keyboard
 
@@ -29,6 +30,7 @@ class LocalFlowApp:
         )
 
         self._listener: keyboard.Listener | None = None
+        self._side_specific_hotkey = bool(re.search(r"<(?:cmd|ctrl|shift|alt)_[lr]>", config.hotkey))
         self._hotkey = keyboard.HotKey(keyboard.HotKey.parse(config.hotkey), self._toggle_recording)
         self._state_lock = threading.Lock()
         self._processing = False
@@ -37,12 +39,20 @@ class LocalFlowApp:
     def _on_press(self, key: keyboard.KeyCode | keyboard.Key) -> None:
         if self._listener is None:
             return
-        self._hotkey.press(self._listener.canonical(key))
+        self._hotkey.press(self._normalize_listener_key(key))
 
     def _on_release(self, key: keyboard.KeyCode | keyboard.Key) -> None:
         if self._listener is None:
             return
-        self._hotkey.release(self._listener.canonical(key))
+        self._hotkey.release(self._normalize_listener_key(key))
+
+    def _normalize_listener_key(self, key: keyboard.KeyCode | keyboard.Key) -> keyboard.KeyCode | keyboard.Key:
+        if self._listener is None:
+            return key
+        if self._side_specific_hotkey and isinstance(key, keyboard.Key) and key.value.vk is not None:
+            # Preserve right/left modifier identity for combos like <cmd_r>+<shift_r>.
+            return keyboard.KeyCode.from_vk(key.value.vk)
+        return self._listener.canonical(key)
 
     def _toggle_recording(self) -> None:
         with self._state_lock:

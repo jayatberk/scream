@@ -58,7 +58,7 @@ The app stores local models in:
 localflow run
 ```
 
-Default hotkey: `Cmd+Shift+Space`
+Default toggle key: `Right Command + Right Shift` (`<cmd_r>+<shift_r>`)
 
 - Press once: start recording
 - Press again: stop, transcribe, clean, and paste
@@ -76,7 +76,7 @@ Then set `enable_enhancer = true` and point `enhancer_model_path` in your config
 Example config:
 
 ```toml
-hotkey = "<cmd>+<shift>+<space>"
+hotkey = "<cmd_r>+<shift_r>"
 sample_rate = 16000
 whisper_model = "tiny.en"
 language = "en"
