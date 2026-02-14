@@ -85,7 +85,7 @@ Then set `enable_enhancer = true` and point `enhancer_model_path` in your config
 Example config:
 
 ```toml
-hotkey = "<cmd_r>+<shift_r>"
+hotkey = "<cmd_r>"
 sample_rate = 16000
 whisper_model = "tiny.en"
 language = "en"
