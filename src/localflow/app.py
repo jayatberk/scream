@@ -121,7 +121,8 @@ class LocalFlowApp:
                 history_mode = "post-enhancer" if self.config.enable_enhancer else "pre-enhancer"
                 history_text = text if self.config.enable_enhancer else pre_enhancer_text
                 print(f"[localflow] Before enhancer: {pre_enhancer_text}")
-                print(f"[localflow] After enhancer: {text}")
+                if self.config.enable_enhancer:
+                    print(f"[localflow] After enhancer: {text}")
                 if enhancer_elapsed is not None:
                     print(f"[localflow] Enhancer time: {enhancer_elapsed:.2f}s")
                 append_history(history_text, mode=history_mode)
