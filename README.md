@@ -66,7 +66,6 @@ Default toggle key: `Right Command + Right Shift` (`<cmd_r>+<shift_r>`)
 ## GUI
 
 Open a simple GUI to:
-- Toggle enhancer on/off
 - View last 10 spoken items
 
 ```bash
